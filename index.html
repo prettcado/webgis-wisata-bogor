@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🗺️ Peta Wisata Kota Bogor</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<!-- Leaflet Heatmap -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg-dark: #0d1117;
+    --bg-card: #161b22;
+    --bg-card2: #1c2333;
+    --border: #30363d;
+    --text-primary: #f0f6fc;
+    --text-muted: #8b949e;
+    --accent-green: #39d353;
+    --accent-yellow: #f0e68c;
+
+    /* Category colors */
+    --c-hotel: #FF6B6B;
+    --c-attraction: #4ECDC4;
+    --c-hostel: #FFE66D;
+    --c-guest_house: #A8E6CF;
+    --c-viewpoint: #FF8B94;
+    --c-theme_park: #B39DDB;
+    --c-museum: #81C784;
+    --c-cabin: #FFAB40;
+    --c-camp_site: #69F0AE;
+    --c-motel: #F48FB1;
+    --c-apartment: #80DEEA;
+    --c-caravan_site: #CE93D8;
+    --c-yes: #FFF176;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ===== LAYOUT ===== */
+  #app {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ===== SIDEBAR ===== */
+  #sidebar {
+    width: 340px;
+    min-width: 340px;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 100;
+    transition: transform 0.3s ease;
+  }
+
+  #sidebar-header {
+    background: linear-gradient(135deg, #1a2a1a 0%, #0d1f0d 50%, #1a1a2e 100%);
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #sidebar-header::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(57,211,83,0.15), transparent);
+    border-radius: 50%;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(57,211,83,0.15);
+    border: 1px solid rgba(57,211,83,0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--accent-green);
+    font-weight: 500;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  #sidebar-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.2;
+    background: linear-gradient(135deg, #fff 0%, #a8e6cf 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  #sidebar-header p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* ===== TABS ===== */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 10px 6px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .tab-btn i { font-size: 14px; }
+
+  .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+  .tab-btn.active {
+    color: var(--accent-green);
+    border-bottom-color: var(--accent-green);
+    background: rgba(57,211,83,0.06);
+  }
+
+  /* ===== PANEL CONTENT ===== */
+  .panel {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .panel.active { display: flex; flex-direction: column; gap: 14px; }
+  .panel::-webkit-scrollbar { width: 4px; }
+  .panel::-webkit-scrollbar-track { background: var(--bg-card); }
+  .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* STATS CARDS */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(57,211,83,0.4);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 60px; height: 60px;
+    background: radial-gradient(circle at top right, var(--card-color, rgba(57,211,83,0.1)), transparent);
+    border-radius: 50%;
+  }
+
+  .stat-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--card-color, var(--accent-green));
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .stat-icon {
+    position: absolute;
+    top: 10px; right: 12px;
+    font-size: 20px;
+    opacity: 0.4;
+    color: var(--card-color, var(--accent-green));
+  }
+
+  /* LEGEND */
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .legend-item:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: var(--border);
+  }
+
+  .legend-item.active-filter {
+    background: rgba(255,255,255,0.08);
+    border-color: var(--border);
+  }
+
+  .legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px var(--dot-color);
+  }
+
+  .legend-label { font-size: 12px; font-weight: 500; flex: 1; }
+  .legend-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--bg-card2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+
+  /* SEARCH */
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px 10px 38px;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 0 3px rgba(57,211,83,0.1);
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* LIST ITEMS */
+  .place-item {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .place-item:hover {
+    border-color: var(--item-color, var(--accent-green));
+    background: rgba(255,255,255,0.04);
+    transform: translateX(2px);
+  }
+
+  .place-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .place-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .place-type {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* CHART CONTAINER */
+  .chart-container {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chart-title i { color: var(--accent-green); }
+
+  canvas { max-width: 100% !important; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    padding: 0 2px;
+  }
+
+  /* INFO CARD */
+  .info-card {
+    background: linear-gradient(135deg, var(--bg-card2), #1a2a1a);
+    border: 1px solid rgba(57,211,83,0.2);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .info-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--accent-green);
+  }
+
+  .info-card p {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #aaa;
+  }
+
+  /* TOGGLE BUTTONS */
+  .toggle-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .toggle-btn {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg-card2);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .toggle-btn:hover { border-color: #aaa; color: var(--text-primary); }
+  .toggle-btn.active {
+    background: var(--accent-green);
+    color: #000;
+    border-color: var(--accent-green);
+    font-weight: 700;
+  }
+
+  /* ===== MAP AREA ===== */
+  #map-area {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #map-topbar {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 50;
+  }
+
+  .map-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .map-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .spacer { flex: 1; }
+
+  .layer-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .layer-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card2);
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .layer-btn:hover { border-color: var(--accent-green); color: var(--text-primary); }
+  .layer-btn.on {
+    background: rgba(57,211,83,0.12);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+  }
+
+  #map {
+    flex: 1;
+    width: 100%;
+  }
+
+  /* POPUP */
+  .leaflet-popup-content-wrapper {
+    background: #161b22 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 14px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6) !important;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  .leaflet-popup-content {
+    margin: 0 !important;
+    width: 280px !important;
+  }
+
+  .leaflet-popup-tip-container { display: none; }
+
+  .popup-inner {
+    padding: 16px;
+  }
+
+  .popup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+
+  .popup-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #f0f6fc;
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+
+  .popup-info-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #8b949e;
+  }
+
+  .popup-info-row i { width: 14px; color: #4ECDC4; }
+
+  .popup-divider {
+    height: 1px;
+    background: #30363d;
+    margin: 12px 0;
+  }
+
+  .popup-action-btn {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, #39d353, #26a641);
+    color: #000;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: opacity 0.2s;
+  }
+
+  .popup-action-btn:hover { opacity: 0.85; }
+
+  /* Zoom info */
+  #zoom-info {
+    position: absolute;
+    bottom: 24px;
+    right: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--text-muted);
+    z-index: 500;
+    pointer-events: none;
+  }
+
+  /* Floating sidebar toggle for mobile */
+  #sidebar-toggle {
+    display: none;
+  }
+
+  /* Animated loading screen */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-dark);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    gap: 16px;
+    transition: opacity 0.5s ease;
+  }
+
+  #loading h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff, #a8e6cf);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  #loading p {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .loader-dots {
+    display: flex;
+    gap: 8px;
+  }
+
+  .loader-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  .loader-dot:nth-child(2) { animation-delay: 0.2s; background: #4ECDC4; }
+  .loader-dot:nth-child(3) { animation-delay: 0.4s; background: #FFE66D; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Notification toast */
+  #toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 13px;
+    color: var(--text-primary);
+    z-index: 9000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Highlight animation */
+  @keyframes markerPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+
+  .pulse-icon {
+    animation: markerPulse 0.6s ease;
+  }
+
+  /* Map view modes */
+  .basemap-selector {
+    display: flex;
+    gap: 6px;
+  }
+
+  .basemap-btn {
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-card2);
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .basemap-btn.active {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+    background: rgba(57,211,83,0.1);
+  }
+
+  /* Density bar */
+  .density-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-card);
+    overflow: hidden;
+    margin-top: 6px;
+  }
+
+  .density-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  /* Scrollable list container */
+  .list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .list-container::-webkit-scrollbar { width: 3px; }
+  .list-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Coordinate display */
+  .coord-display {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* Clear filter btn */
+  .clear-btn {
+    padding: 5px 12px;
+    border: 1px solid rgba(255,100,100,0.3);
+    border-radius: 8px;
+    background: rgba(255,100,100,0.08);
+    color: #FF6B6B;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    display: none;
+  }
+
+  .clear-btn:hover { background: rgba(255,100,100,0.15); }
+  .clear-btn.visible { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading">
+  <div style="font-size:48px">🗺️</div>
+  <h2>Peta Wisata Kota Bogor</h2>
+  <p>Memuat data persebaran tempat wisata...</p>
+  <div class="loader-dots">
+    <div class="loader-dot"></div>
+    <div class="loader-dot"></div>
+    <div class="loader-dot"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="app">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div class="header-badge">
+        <i class="fa fa-map-location-dot"></i>
+        Web GIS Interaktif
+      </div>
+      <h1>Persebaran Tempat<br>Wisata Kota Bogor</h1>
+      <p>Data OpenStreetMap · 63 Titik Wisata</p>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('dashboard')" id="tab-dashboard">
+        <i class="fa fa-house"></i> Dashboard
+      </button>
+      <button class="tab-btn" onclick="switchTab('filter')" id="tab-filter">
+        <i class="fa fa-filter"></i> Filter
+      </button>
+      <button class="tab-btn" onclick="switchTab('list')" id="tab-list">
+        <i class="fa fa-list"></i> Daftar
+      </button>
+      <button class="tab-btn" onclick="switchTab('chart')" id="tab-chart">
+        <i class="fa fa-chart-pie"></i> Statistik
+      </button>
+    </div>
+
+    <!-- PANEL: DASHBOARD -->
+    <div id="panel-dashboard" class="panel active">
+      <div class="info-card">
+        <h3>🌿 Kota Bogor</h3>
+        <p>Dikenal sebagai <strong style="color:#a8e6cf">Kota Hujan</strong>, Bogor merupakan destinasi wisata favorit warga Jakarta dan sekitarnya. Dengan luas 118 km² dan populasi ~1 juta jiwa, kota ini menawarkan wisata alam, budaya, kuliner, dan sejarah yang kaya.</p>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <!-- filled by JS -->
+      </div>
+
+      <div class="section-title">📍 Sebaran per Kategori</div>
+      <div id="category-bars"><!-- filled by JS --></div>
+
+      <div class="section-title">🗺️ Basemap</div>
+      <div class="basemap-selector">
+        <button class="basemap-btn active" onclick="setBasemap('osm')" id="bm-osm">🗺 OSM</button>
+        <button class="basemap-btn" onclick="setBasemap('carto')" id="bm-carto">🌑 Dark</button>
+        <button class="basemap-btn" onclick="setBasemap('satellite')" id="bm-satellite">🛰 Satellite</button>
+        <button class="basemap-btn" onclick="setBasemap('topo')" id="bm-topo">⛰ Topo</button>
+      </div>
+    </div>
+
+    <!-- PANEL: FILTER -->
+    <div id="panel-filter" class="panel">
+      <div class="section-title">Tampilkan Layer</div>
+      <div class="toggle-group" id="layer-toggles"><!-- filled by JS --></div>
+
+      <div class="section-title" style="margin-top:4px">Mode Visualisasi</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="setMode('marker')" id="mode-marker"><i class="fa fa-map-pin"></i> Marker</button>
+        <button class="toggle-btn" onclick="setMode('heatmap')" id="mode-heatmap"><i class="fa fa-fire"></i> Heatmap</button>
+        <button class="toggle-btn" onclick="setMode('cluster')" id="mode-cluster"><i class="fa fa-circle-dot"></i> Cluster</button>
+        <button class="toggle-btn" onclick="setMode('both')" id="mode-both"><i class="fa fa-layer-group"></i> Both</button>
+      </div>
+
+      <div class="section-title" style="margin-top:4px">Legenda Kategori</div>
+      <div id="legend-list"><!-- filled by JS --></div>
+    </div>
+
+    <!-- PANEL: LIST -->
+    <div id="panel-list" class="panel">
+      <div class="search-wrap">
+        <i class="fa fa-search search-icon"></i>
+        <input type="text" class="search-input" id="search-input"
+               placeholder="Cari tempat wisata..."
+               oninput="filterList()">
+      </div>
+      <button class="clear-btn" id="clear-filter-btn" onclick="clearAllFilters()">
+        <i class="fa fa-times"></i> Hapus Filter
+      </button>
+      <div class="list-container" id="place-list"><!-- filled by JS --></div>
+    </div>
+
+    <!-- PANEL: CHART -->
+    <div id="panel-chart" class="panel">
+      <div class="chart-container">
+        <div class="chart-title"><i class="fa fa-chart-pie"></i> Distribusi Kategori</div>
+        <canvas id="donut-chart" height="200"></canvas>
+      </div>
+      <div class="chart-container">
+        <div class="chart-title"><i class="fa fa-chart-bar"></i> Jumlah per Kategori</div>
+        <canvas id="bar-chart" height="200"></canvas>
+      </div>
+      <div class="chart-container">
+        <div class="chart-title"><i class="fa fa-map"></i> Sebaran Koordinat</div>
+        <canvas id="scatter-chart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP AREA -->
+  <div id="map-area">
+    <div id="map-topbar">
+      <div>
+        <div class="map-title">🗺️ Peta Interaktif Wisata Bogor</div>
+        <div class="map-subtitle" id="map-subtitle">Menampilkan semua 63 tempat wisata</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="layer-btn" onclick="fitBounds()" title="Reset view">
+        <i class="fa fa-compress"></i> Reset
+      </button>
+      <button class="layer-btn on" id="heat-toggle" onclick="toggleHeatmap()">
+        <i class="fa fa-fire"></i> Heatmap
+      </button>
+      <button class="layer-btn" id="cluster-toggle" onclick="toggleCluster()">
+        <i class="fa fa-circle-dot"></i> Cluster
+      </button>
+    </div>
+    <div id="map"></div>
+    <div id="zoom-info">Zoom: <span id="zoom-level">12</span></div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const PLACES = [
+  {"name":"Mugi's Inn","type":"cabin","lat":-6.6546676,"lng":106.8001642},
+  {"name":"Kontrakan Iwa Kotabatu","type":"hostel","lat":-6.6278914,"lng":106.7831062},
+  {"name":"Tempat Wisata Alam","type":"attraction","lat":-6.623221,"lng":106.7978044},
+  {"name":"Issam Guesthouse","type":"guest_house","lat":-6.6233385,"lng":106.7980227},
+  {"name":"Taman SKI","type":"attraction","lat":-6.6219242,"lng":106.8197168},
+  {"name":"Air Ball Water Battle","type":"attraction","lat":-6.6226185,"lng":106.8211453},
+  {"name":"Dunebuggy Racetrack","type":"attraction","lat":-6.6228783,"lng":106.8221275},
+  {"name":"Hotel Cisarua","type":"hotel","lat":-6.5651184,"lng":106.7358913},
+  {"name":"Hotel Sentul","type":"hotel","lat":-6.6266865,"lng":106.8218123},
+  {"name":"Penginapan Sentul","type":"guest_house","lat":-6.6355956,"lng":106.8250462},
+  {"name":"Bumi Perkemahan Sukamantri","type":"camp_site","lat":-6.6763277,"lng":106.7525441},
+  {"name":"My Home Viewpoint","type":"viewpoint","lat":-6.5741388,"lng":106.7775528},
+  {"name":"Wisma Renganis","type":"hotel","lat":-6.6120642,"lng":106.8142589},
+  {"name":"Hotel Bogor Tengah","type":"hotel","lat":-6.606788,"lng":106.8106022},
+  {"name":"Wisma Pakuan Syariah Hotel","type":"hotel","lat":-6.6066861,"lng":106.8113853},
+  {"name":"Hotel Onih","type":"hotel","lat":-6.6019072,"lng":106.7945613},
+  {"name":"Puri Bali Homestay","type":"hostel","lat":-6.6019887,"lng":106.7944473},
+  {"name":"Kidu's Guest House","type":"guest_house","lat":-6.601999,"lng":106.7934578},
+  {"name":"Royal Hotel Bogor","type":"hotel","lat":-6.6026405,"lng":106.7951829},
+  {"name":"Ibis Style Hotel Bogor","type":"hotel","lat":-6.6048134,"lng":106.8364385},
+  {"name":"Sahira Butik Hotel","type":"hotel","lat":-6.6011188,"lng":106.7941239},
+  {"name":"Spot Fotografi Kereta Api","type":"viewpoint","lat":-6.5877048,"lng":106.7921989},
+  {"name":"Bogor Golf","type":"attraction","lat":-6.5868125,"lng":106.7825678},
+  {"name":"Eka Lokasari Mall","type":"attraction","lat":-6.6218886,"lng":106.8174702},
+  {"name":"Rumah Pelangi Motel","type":"motel","lat":-6.6390546,"lng":106.8408186},
+  {"name":"GSV Cottage Bogor","type":"hotel","lat":-6.5534513,"lng":106.734678},
+  {"name":"Hotel Ririn","type":"hotel","lat":-6.6132094,"lng":106.8123058},
+  {"name":"Aston Hotel Bogor","type":"hotel","lat":-6.6365028,"lng":106.7951786},
+  {"name":"Gong Factory Bogor","type":"attraction","lat":-6.605668,"lng":106.7918577},
+  {"name":"San Dramaga Village Residence","type":"guest_house","lat":-6.5763344,"lng":106.7309773},
+  {"name":"Panorama Sentul","type":"viewpoint","lat":-6.5280709,"lng":106.8092046},
+  {"name":"Cikaret Viewpoint","type":"viewpoint","lat":-6.6143628,"lng":106.7847232},
+  {"name":"Rumah Ibrahim Viewpoint","type":"viewpoint","lat":-6.5909099,"lng":106.7507367},
+  {"name":"Penginapan Leuwiliang","type":"guest_house","lat":-6.6395685,"lng":106.7501519},
+  {"name":"Gazebo Taman Kota Bogor","type":"attraction","lat":-6.5972575,"lng":106.8005741},
+  {"name":"Raja Inn Hotel","type":"hotel","lat":-6.5747202,"lng":106.8083557},
+  {"name":"Sasana Grand Pangrango","type":"hotel","lat":-6.5928343,"lng":106.8043902},
+  {"name":"PSEC Bogor","type":"attraction","lat":-6.5654883,"lng":106.8100662},
+  {"name":"Hostel Bogor City","type":"hostel","lat":-6.57724,"lng":106.8101071},
+  {"name":"Panorama Utara Bogor","type":"viewpoint","lat":-6.5121253,"lng":106.7308638},
+  {"name":"Apartemen Bogor","type":"apartment","lat":-6.5806926,"lng":106.7592148},
+  {"name":"Wisma Firman Pensione","type":"hostel","lat":-6.601658,"lng":106.7941109},
+  {"name":"Tom's Homestay","type":"guest_house","lat":-6.5979176,"lng":106.7933016},
+  {"name":"The Melchior Hotel","type":"hotel","lat":-6.6026292,"lng":106.7965691},
+  {"name":"Hotel Onih Bogor","type":"hotel","lat":-6.6015996,"lng":106.7943234},
+  {"name":"Whiz Prime Hotel Pajajaran","type":"hotel","lat":-6.5858417,"lng":106.8052935},
+  {"name":"Zipline Adventure Bogor","type":"attraction","lat":-6.6227539,"lng":106.8219383},
+  {"name":"Stasiun Tas Wisata","type":"attraction","lat":-6.6186481,"lng":106.8213525},
+  {"name":"Masjid Baitussholihin","type":"viewpoint","lat":-6.6394826,"lng":106.8349592},
+  {"name":"Hotel Santika Bogor","type":"hotel","lat":-6.6011551,"lng":106.806708},
+  {"name":"Swissbel Hotel Bogor","type":"apartment","lat":-6.5885384,"lng":106.8041153},
+  {"name":"Marcopolo Water Adventure","type":"attraction","lat":-6.5478286,"lng":106.7826037},
+  {"name":"Swiss-Belhotel Bogor","type":"apartment","lat":-6.5911349,"lng":106.8019102},
+  {"name":"Novotel Coralia Bogor","type":"hotel","lat":-6.6034129,"lng":106.8381891},
+  {"name":"Hotel Novotel Bogor Golf Resort","type":"hotel","lat":-6.6039181,"lng":106.8386862},
+  {"name":"Padjadjaran Hotel Bogor","type":"hotel","lat":-6.5763376,"lng":106.8071932},
+  {"name":"Rion Hostel and Cafe","type":"hostel","lat":-6.6073289,"lng":106.8068917},
+  {"name":"Arch Hotel Bogor","type":"hotel","lat":-6.578502,"lng":106.807568},
+  {"name":"Penginapan Dramaga","type":"guest_house","lat":-6.5790409,"lng":106.7551752},
+  {"name":"The Alana Hotel & Conference Center","type":"hotel","lat":-6.5698702,"lng":106.8486458},
+  {"name":"Rivera Outbound & Edutainment","type":"theme_park","lat":-6.6250533,"lng":106.7964971},
+  {"name":"Caravan Site Bogor","type":"caravan_site","lat":-6.625557,"lng":106.7923713},
+  {"name":"BELVA Huis Hostel","type":"hostel","lat":-6.6061791,"lng":106.8008017}
+];
+
+// Extra famous attractions (manually added for richer map)
+const EXTRA = [
+  {"name":"Kebun Raya Bogor","type":"attraction","lat":-6.6025,"lng":106.7969},
+  {"name":"Istana Bogor","type":"attraction","lat":-6.5997,"lng":106.7977},
+  {"name":"Taman Safari Indonesia","type":"theme_park","lat":-6.7122,"lng":106.9349},
+  {"name":"Museum Zoologi Bogor","type":"museum","lat":-6.6027,"lng":106.7960},
+  {"name":"Museum PETA Bogor","type":"museum","lat":-6.5953,"lng":106.8004},
+  {"name":"Puncak Pass","type":"viewpoint","lat":-6.7098,"lng":106.9968},
+  {"name":"Telaga Warna Puncak","type":"attraction","lat":-6.7229,"lng":107.0023},
+  {"name":"Air Terjun Curug Nangka","type":"attraction","lat":-6.6493,"lng":106.7033},
+  {"name":"Taman Bunga Nusantara","type":"theme_park","lat":-6.7355,"lng":107.0175},
+  {"name":"Kampung Wisata Cinangneng","type":"attraction","lat":-6.5906,"lng":106.7338},
+  {"name":"Situ Gede Bogor","type":"attraction","lat":-6.5596,"lng":106.7275},
+  {"name":"De Tuik Resort","type":"hotel","lat":-6.6789,"lng":106.7801},
+  {"name":"Museum Sri Baduga","type":"museum","lat":-6.9174,"lng":107.6191},
+  {"name":"Curug Cigamea","type":"attraction","lat":-6.6771,"lng":106.6812},
+  {"name":"Kampung Adat Suku Baduy","type":"attraction","lat":-6.5667,"lng":106.8167},
+  {"name":"Taman Wisata Matahari","type":"theme_park","lat":-6.6956,"lng":107.0243},
+  {"name":"Highland Park Resort","type":"hotel","lat":-6.6945,"lng":107.0089},
+  {"name":"Cimory Riverside","type":"attraction","lat":-6.6378,"lng":106.9567},
+  {"name":"Bogor Botanical Garden","type":"attraction","lat":-6.6022,"lng":106.7997},
+  {"name":"Jungle Land Adventure","type":"theme_park","lat":-6.6187,"lng":106.8211}
+];
+
+const ALL_PLACES = [...PLACES, ...EXTRA];
+
+// ============================================================
+// CATEGORY CONFIG
+// ============================================================
+const CAT_CONFIG = {
+  hotel:        { color: '#FF6B6B', icon: '🏨', label: 'Hotel' },
+  attraction:   { color: '#4ECDC4', icon: '🎡', label: 'Atraksi' },
+  hostel:       { color: '#FFE66D', icon: '🛏️', label: 'Hostel' },
+  guest_house:  { color: '#A8E6CF', icon: '🏠', label: 'Guest House' },
+  viewpoint:    { color: '#FF8B94', icon: '👁️', label: 'Viewpoint' },
+  theme_park:   { color: '#B39DDB', icon: '🎠', label: 'Theme Park' },
+  museum:       { color: '#81C784', icon: '🏛️', label: 'Museum' },
+  cabin:        { color: '#FFAB40', icon: '🏕️', label: 'Cabin' },
+  camp_site:    { color: '#69F0AE', icon: '⛺', label: 'Camping' },
+  motel:        { color: '#F48FB1', icon: '🏩', label: 'Motel' },
+  apartment:    { color: '#80DEEA', icon: '🏢', label: 'Apartemen' },
+  caravan_site: { color: '#CE93D8', icon: '🚐', label: 'Caravan' },
+  yes:          { color: '#FFF176', icon: '📍', label: 'Wisata' },
+};
+
+const getColor = t => (CAT_CONFIG[t] || { color: '#aaa' }).color;
+const getIcon  = t => (CAT_CONFIG[t] || { icon: '📍' }).icon;
+const getLabel = t => (CAT_CONFIG[t] || { label: t }).label;
+
+// ============================================================
+// STATE
+// ============================================================
+let map, tileLayer, heatLayer, markerClusterGroup;
+let allMarkers = [];
+let activeFilters = new Set(Object.keys(CAT_CONFIG));
+let currentMode = 'marker';
+let heatmapOn = true;
+let clusterOn = false;
+let charts = {};
+
+// ============================================================
+// MAP INIT
+// ============================================================
+function initMap() {
+  map = L.map('map', {
+    center: [-6.595, 106.8],
+    zoom: 12,
+    zoomControl: false,
+  });
+
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19
+  });
+  tileLayer.addTo(map);
+
+  map.on('zoomend', () => {
+    document.getElementById('zoom-level').textContent = map.getZoom();
+  });
+
+  // Init cluster group
+  markerClusterGroup = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    iconCreateFunction: (cluster) => {
+      const count = cluster.getChildCount();
+      return L.divIcon({
+        html: `<div style="background:rgba(57,211,83,0.85);color:#000;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid rgba(57,211,83,0.4)">${count}</div>`,
+        className: '',
+        iconSize: [36, 36]
+      });
+    }
+  });
+
+  renderMarkers();
+  initHeatmap();
+  initCharts();
+  buildSidebar();
+
+  setTimeout(() => {
+    document.getElementById('loading').style.opacity = '0';
+    setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
+  }, 1200);
+}
+
+// ============================================================
+// MARKERS
+// ============================================================
+function createMarkerIcon(place, size = 32) {
+  const color = getColor(place.type);
+  const icon = getIcon(place.type);
+  return L.divIcon({
+    html: `<div style="
+      width:${size}px;height:${size}px;
+      background:${color};
+      border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);
+      border:2px solid rgba(255,255,255,0.6);
+      box-shadow:0 4px 12px ${color}55;
+      display:flex;align-items:center;justify-content:center;
+      transition:all 0.2s;
+    "><span style="transform:rotate(45deg);font-size:${size*0.45}px">${icon}</span></div>`,
+    className: '',
+    iconSize: [size, size],
+    iconAnchor: [size/2, size],
+    popupAnchor: [0, -size]
+  });
+}
+
+function renderMarkers() {
+  allMarkers.forEach(m => {
+    map.removeLayer(m);
+    markerClusterGroup.removeLayer(m);
+  });
+  allMarkers = [];
+  markerClusterGroup.clearLayers();
+
+  const visible = ALL_PLACES.filter(p => activeFilters.has(p.type));
+
+  visible.forEach(place => {
+    const marker = L.marker([place.lat, place.lng], {
+      icon: createMarkerIcon(place, 30)
+    });
+
+    const color = getColor(place.type);
+    const label = getLabel(place.type);
+    const icon = getIcon(place.type);
+
+    marker.bindPopup(`
+      <div class="popup-inner">
+        <div class="popup-badge" style="background:${color}22;color:${color};border:1px solid ${color}44">
+          ${icon} ${label}
+        </div>
+        <div class="popup-name">${place.name}</div>
+        <div class="popup-info-row">
+          <i class="fa fa-location-dot"></i>
+          <span>Kota Bogor, Jawa Barat</span>
+        </div>
+        <div class="popup-info-row">
+          <i class="fa fa-map-pin"></i>
+          <span class="coord-display">${place.lat.toFixed(4)}, ${place.lng.toFixed(4)}</span>
+        </div>
+        <div class="popup-divider"></div>
+        <button class="popup-action-btn" onclick="focusPlace(${place.lat}, ${place.lng})">
+          <i class="fa fa-compass"></i> Lihat di Peta
+        </button>
+      </div>
+    `, { maxWidth: 300 });
+
+    marker.on('click', () => {
+      highlightListItem(place.name);
+    });
+
+    allMarkers.push(marker);
+
+    if (clusterOn) {
+      markerClusterGroup.addLayer(marker);
+    } else {
+      marker.addTo(map);
+    }
+  });
+
+  if (clusterOn && !map.hasLayer(markerClusterGroup)) {
+    map.addLayer(markerClusterGroup);
+  }
+
+  updateSubtitle(visible.length);
+  updateListPanel();
+}
+
+// ============================================================
+// HEATMAP (manual implementation using canvas)
+// ============================================================
+function initHeatmap() {
+  // Use a simple canvas overlay for heatmap
+  const HeatmapLayer = L.Layer.extend({
+    onAdd(map) {
+      this._map = map;
+      this._canvas = L.DomUtil.create('canvas', 'leaflet-heatmap-canvas');
+      const size = map.getSize();
+      this._canvas.width = size.x;
+      this._canvas.height = size.y;
+      this._canvas.style.position = 'absolute';
+      this._canvas.style.top = '0';
+      this._canvas.style.left = '0';
+      this._canvas.style.pointerEvents = 'none';
+      this._canvas.style.zIndex = '300';
+      map.getPanes().overlayPane.appendChild(this._canvas);
+      map.on('moveend zoomend resize', this._redraw, this);
+      this._redraw();
+    },
+    onRemove(map) {
+      this._canvas.remove();
+      map.off('moveend zoomend resize', this._redraw, this);
+    },
+    _redraw() {
+      const canvas = this._canvas;
+      const map = this._map;
+      const size = map.getSize();
+      canvas.width = size.x;
+      canvas.height = size.y;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const filtered = ALL_PLACES.filter(p => activeFilters.has(p.type));
+      if (!filtered.length) return;
+
+      filtered.forEach(p => {
+        const pt = map.latLngToContainerPoint([p.lat, p.lng]);
+        const r = Math.max(40, 80 / Math.pow(2, map.getZoom() - 12));
+        const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, r);
+        const color = getColor(p.type);
+        const hex2rgb = h => {
+          const r = parseInt(h.slice(1,3),16);
+          const g = parseInt(h.slice(3,5),16);
+          const b = parseInt(h.slice(5,7),16);
+          return `${r},${g},${b}`;
+        };
+        grad.addColorStop(0, `rgba(${hex2rgb(color)},0.4)`);
+        grad.addColorStop(1, `rgba(${hex2rgb(color)},0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+  });
+
+  heatLayer = new HeatmapLayer();
+  if (heatmapOn) heatLayer.addTo(map);
+}
+
+// ============================================================
+// BASEMAP SWITCHER
+// ============================================================
+const BASEMAPS = {
+  osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  carto: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  topo: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+};
+
+function setBasemap(key) {
+  map.removeLayer(tileLayer);
+  tileLayer = L.tileLayer(BASEMAPS[key], { maxZoom: 19, attribution: '© Map' });
+  tileLayer.addTo(map);
+  tileLayer.bringToBack();
+  document.querySelectorAll('.basemap-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('bm-' + key).classList.add('active');
+  showToast('Basemap: ' + key.toUpperCase());
+}
+
+// ============================================================
+// LAYER / MODE CONTROLS
+// ============================================================
+function toggleHeatmap() {
+  heatmapOn = !heatmapOn;
+  if (heatmapOn) {
+    heatLayer.addTo(map);
+    document.getElementById('heat-toggle').classList.add('on');
+  } else {
+    map.removeLayer(heatLayer);
+    document.getElementById('heat-toggle').classList.remove('on');
+  }
+  showToast(heatmapOn ? '🔥 Heatmap aktif' : '🔥 Heatmap nonaktif');
+}
+
+function toggleCluster() {
+  clusterOn = !clusterOn;
+  document.getElementById('cluster-toggle').classList.toggle('on', clusterOn);
+  renderMarkers();
+  showToast(clusterOn ? '🔵 Cluster aktif' : '🔵 Cluster nonaktif');
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('[id^="mode-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-' + mode).classList.add('active');
+
+  switch(mode) {
+    case 'marker':
+      heatmapOn = false; clusterOn = false;
+      break;
+    case 'heatmap':
+      heatmapOn = true; clusterOn = false;
+      break;
+    case 'cluster':
+      heatmapOn = false; clusterOn = true;
+      break;
+    case 'both':
+      heatmapOn = true; clusterOn = false;
+      break;
+  }
+
+  if (heatmapOn) { if (!map.hasLayer(heatLayer)) heatLayer.addTo(map); }
+  else { if (map.hasLayer(heatLayer)) map.removeLayer(heatLayer); }
+
+  document.getElementById('heat-toggle').classList.toggle('on', heatmapOn);
+  document.getElementById('cluster-toggle').classList.toggle('on', clusterOn);
+  renderMarkers();
+}
+
+// ============================================================
+// FILTER
+// ============================================================
+function toggleFilter(type, btn) {
+  if (activeFilters.has(type)) {
+    activeFilters.delete(type);
+    btn.classList.remove('active');
+    showToast(`🚫 ${getLabel(type)} disembunyikan`);
+  } else {
+    activeFilters.add(type);
+    btn.classList.add('active');
+    showToast(`✅ ${getLabel(type)} ditampilkan`);
+  }
+  renderMarkers();
+  if (heatmapOn) heatLayer._redraw && heatLayer._redraw();
+  updateCharts();
+}
+
+function clearAllFilters() {
+  activeFilters = new Set(Object.keys(CAT_CONFIG));
+  document.querySelectorAll('.layer-toggle-btn').forEach(b => b.classList.add('active'));
+  renderMarkers();
+  updateCharts();
+  showToast('✅ Semua filter dihapus');
+}
+
+// ============================================================
+// SIDEBAR BUILD
+// ============================================================
+function buildSidebar() {
+  buildStats();
+  buildCategoryBars();
+  buildLayerToggles();
+  buildLegend();
+  updateListPanel();
+}
+
+function countByType() {
+  const counts = {};
+  ALL_PLACES.forEach(p => {
+    counts[p.type] = (counts[p.type] || 0) + 1;
+  });
+  return counts;
+}
+
+function buildStats() {
+  const counts = countByType();
+  const types = Object.keys(counts);
+  const total = ALL_PLACES.length;
+  const hotels = (counts.hotel || 0) + (counts.motel || 0) + (counts.hostel || 0) + (counts.guest_house || 0) + (counts.cabin || 0) + (counts.apartment || 0) + (counts.caravan_site || 0);
+  const attractions = (counts.attraction || 0) + (counts.theme_park || 0) + (counts.museum || 0);
+  const viewpoints = counts.viewpoint || 0;
+
+  const grid = document.getElementById('stats-grid');
+  const cards = [
+    { n: total, label: 'Total Wisata', icon: 'fa-map-pin', color: '#39d353' },
+    { n: types.length, label: 'Kategori', icon: 'fa-tags', color: '#4ECDC4' },
+    { n: attractions, label: 'Atraksi & Taman', icon: 'fa-star', color: '#FFE66D' },
+    { n: hotels, label: 'Penginapan', icon: 'fa-hotel', color: '#FF6B6B' },
+  ];
+
+  grid.innerHTML = cards.map(c => `
+    <div class="stat-card" style="--card-color:${c.color}">
+      <div class="stat-number" style="color:${c.color}">${c.n}</div>
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-icon"><i class="fa ${c.icon}"></i></div>
+    </div>
+  `).join('');
+}
+
+function buildCategoryBars() {
+  const counts = countByType();
+  const max = Math.max(...Object.values(counts));
+  const container = document.getElementById('category-bars');
+  container.innerHTML = Object.entries(counts)
+    .sort((a,b) => b[1] - a[1])
+    .map(([type, count]) => {
+      const color = getColor(type);
+      const pct = Math.round(count / max * 100);
+      return `
+        <div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+            <span style="font-size:11px;font-weight:500">${getIcon(type)} ${getLabel(type)}</span>
+            <span style="font-size:11px;color:${color};font-weight:700">${count}</span>
+          </div>
+          <div class="density-bar">
+            <div class="density-fill" style="width:${pct}%;background:${color}"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+}
+
+function buildLayerToggles() {
+  const counts = countByType();
+  const container = document.getElementById('layer-toggles');
+  container.innerHTML = Object.entries(counts)
+    .sort((a,b) => b[1] - a[1])
+    .map(([type, count]) => {
+      const color = getColor(type);
+      const icon = getIcon(type);
+      return `
+        <button class="toggle-btn layer-toggle-btn active"
+          onclick="toggleFilter('${type}', this)"
+          style="border-color:${color}33;--card-color:${color}">
+          ${icon} ${getLabel(type)} <span style="opacity:.6;font-size:10px">${count}</span>
+        </button>
+      `;
+    }).join('');
+}
+
+function buildLegend() {
+  const counts = countByType();
+  const container = document.getElementById('legend-list');
+  container.innerHTML = Object.entries(counts)
+    .sort((a,b) => b[1] - a[1])
+    .map(([type, count]) => {
+      const color = getColor(type);
+      return `
+        <div class="legend-item" onclick="flyToType('${type}')">
+          <div class="legend-dot" style="background:${color};--dot-color:${color}"></div>
+          <span class="legend-label">${getIcon(type)} ${getLabel(type)}</span>
+          <span class="legend-count">${count}</span>
+        </div>
+      `;
+    }).join('');
+}
+
+function updateListPanel() {
+  const query = document.getElementById('search-input')?.value?.toLowerCase() || '';
+  const container = document.getElementById('place-list');
+  if (!container) return;
+
+  const filtered = ALL_PLACES.filter(p =>
+    activeFilters.has(p.type) &&
+    (p.name.toLowerCase().includes(query) || getLabel(p.type).toLowerCase().includes(query))
+  );
+
+  container.innerHTML = filtered.map(p => {
+    const color = getColor(p.type);
+    return `
+      <div class="place-item" onclick="flyTo(${p.lat}, ${p.lng}, '${p.name.replace(/'/g,"\\'")}', '${p.type}')"
+           style="--item-color:${color}">
+        <div class="place-dot" style="background:${color}"></div>
+        <div>
+          <div class="place-name">${p.name}</div>
+          <div class="place-type">${getIcon(p.type)} ${getLabel(p.type)} · ${p.lat.toFixed(3)}, ${p.lng.toFixed(3)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const clearBtn = document.getElementById('clear-filter-btn');
+  if (clearBtn) clearBtn.classList.toggle('visible', activeFilters.size < Object.keys(CAT_CONFIG).length);
+}
+
+function filterList() {
+  updateListPanel();
+}
+
+// ============================================================
+// MAP ACTIONS
+// ============================================================
+function flyTo(lat, lng, name, type) {
+  map.flyTo([lat, lng], 16, { duration: 1.2 });
+  showToast(`📍 ${name}`);
+  switchTab('list');
+
+  // Open popup
+  setTimeout(() => {
+    const marker = allMarkers.find(m => {
+      const ll = m.getLatLng();
+      return Math.abs(ll.lat - lat) < 0.0001 && Math.abs(ll.lng - lng) < 0.0001;
+    });
+    if (marker) marker.openPopup();
+  }, 1300);
+}
+
+function flyToType(type) {
+  const places = ALL_PLACES.filter(p => p.type === type);
+  if (!places.length) return;
+  const bounds = L.latLngBounds(places.map(p => [p.lat, p.lng]));
+  map.flyToBounds(bounds.pad(0.2), { duration: 1.2 });
+  showToast(`🗺️ Menampilkan ${places.length} ${getLabel(type)}`);
+}
+
+function focusPlace(lat, lng) {
+  map.flyTo([lat, lng], 17, { duration: 0.8 });
+}
+
+function fitBounds() {
+  map.flyTo([-6.595, 106.8], 12, { duration: 1 });
+  showToast('🗺️ Reset ke tampilan awal');
+}
+
+function highlightListItem(name) {
+  switchTab('list');
+}
+
+function updateSubtitle(count) {
+  const el = document.getElementById('map-subtitle');
+  if (el) el.textContent = `Menampilkan ${count} dari ${ALL_PLACES.length} tempat wisata`;
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+
+  if (name === 'chart') renderCharts();
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+function initCharts() {
+  Chart.defaults.color = '#8b949e';
+  Chart.defaults.font.family = 'DM Sans';
+}
+
+function renderCharts() {
+  const counts = countByType();
+  const types = Object.keys(counts).sort((a,b) => counts[b] - counts[a]);
+  const colors = types.map(t => getColor(t));
+  const labels = types.map(t => `${getIcon(t)} ${getLabel(t)}`);
+  const values = types.map(t => counts[t]);
+
+  // Donut
+  if (charts.donut) charts.donut.destroy();
+  charts.donut = new Chart(document.getElementById('donut-chart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#161b22' }] },
+    options: {
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw}` } } },
+      cutout: '65%',
+      animation: { duration: 800 }
+    }
+  });
+
+  // Bar
+  if (charts.bar) charts.bar.destroy();
+  charts.bar = new Chart(document.getElementById('bar-chart'), {
+    type: 'bar',
+    data: { labels: labels.map(l => l.split(' ').slice(1).join(' ')), datasets: [{
+      data: values, backgroundColor: colors,
+      borderRadius: 6, borderSkipped: false
+    }]},
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#30363d' }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: '#30363d' }, ticks: { stepSize: 1 } }
+      },
+      animation: { duration: 600 }
+    }
+  });
+
+  // Scatter
+  const active = ALL_PLACES.filter(p => activeFilters.has(p.type));
+  if (charts.scatter) charts.scatter.destroy();
+  const datasets = types.filter(t => counts[t] > 0).map(t => ({
+    label: getLabel(t),
+    data: ALL_PLACES.filter(p => p.type === t).map(p => ({ x: p.lng, y: -p.lat })),
+    backgroundColor: getColor(t) + '99',
+    pointRadius: 5,
+    pointHoverRadius: 8
+  }));
+
+  charts.scatter = new Chart(document.getElementById('scatter-chart'), {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#30363d' }, title: { display: true, text: 'Longitude' } },
+        y: { grid: { color: '#30363d' }, title: { display: true, text: '-Latitude' } }
+      },
+      animation: { duration: 500 }
+    }
+  });
+}
+
+function updateCharts() {
+  if (document.getElementById('panel-chart').classList.contains('active')) {
+    renderCharts();
+  }
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ============================================================
+// START
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  initMap();
+});
+</script>
+</body>
+</html>
